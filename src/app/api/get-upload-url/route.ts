@@ -7,7 +7,7 @@ const mux = new Mux({
     tokenId: process.env.MUX_TOKEN_ID!,
     tokenSecret: process.env.MUX_TOKEN_SECRET!
 });
-const { video } = mux;
+const muxVideo = mux.video;
 
 export async function POST(req: NextRequest) {
     try {
@@ -15,51 +15,39 @@ export async function POST(req: NextRequest) {
 
         const { userId } = await req.json();
 
-        console.log("Before video.uploads.create() call...");
+        console.log("Generating Mux Upload URL...");
 
-        const upload = await video.uploads.create({ 
+        // Create upload with new_asset_settings - removed the mp4_support param
+        const upload = await muxVideo.uploads.create({
             cors_origin: "*",
-            new_asset_settings: { playback_policy: ["public"] },
+            new_asset_settings: { 
+                playback_policy: ["public"]
+            },
         });
 
         const uploadUrl = upload.url;
+        const uploadId = upload.id;
+
         console.log("Mux Upload URL generated:", uploadUrl);
+        console.log("Mux Upload ID:", uploadId);
 
-
-        console.log("Before muxVideo.assets.create() call...");
-
-        const assetResponse = await mux.video.assets.create({ 
-            input: [{ url: uploadUrl }], 
-            playback_policy: ["public"],
-        });
-
-
-        console.log("Full assetResponse object:", assetResponse);
-        console.log("Mux Asset Create Response - asset:", assetResponse);
-
-        const muxAssetId = assetResponse.id; 
-        const playbackId = assetResponse.playback_ids?.[0]?.id;
-
-
-        console.log("Extracted muxAssetId:", muxAssetId);
-        console.log("Extracted playbackId:", playbackId);
-
-
-        // Create new Video document in MongoDB
+        // Create a temporary record in the database
         const newVideo = new Video({
-            muxAssetId: muxAssetId,
-            playbackId: playbackId,
+            muxUploadId: uploadId,
             userId: userId,
+            status: "uploading"
         });
 
         await newVideo.save();
-        console.log("Video metadata saved to MongoDB for asset ID:", muxAssetId);
+        console.log("Temporary video record created with uploadId:", uploadId);
 
-        return NextResponse.json({ url: upload.url }); 
-
+        return NextResponse.json({ 
+            url: uploadUrl,
+            uploadId: uploadId
+        });
 
     } catch (error) {
         console.error("Error in /api/get-upload-url:", error);
-        return NextResponse.json({ error: "Failed to create upload URL or Mux asset, or save metadata" }, { status: 500 }); 
+        return NextResponse.json({ error: "Failed to create upload URL" }, { status: 500 });
     }
 }
