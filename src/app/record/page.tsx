@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
-// Dynamically import the Recorder component with SSR disabled
 const Recorder = dynamic(() => import("../../components/Recorder"), {
   ssr: false,
+  loading: () => <p style={{ textAlign: "center", color: "#666" }}>Loading recorder...</p>,
 });
 
 const RecordPage = () => {
@@ -20,13 +20,79 @@ const RecordPage = () => {
   };
 
   return (
-    <div>
-      <h1>Record Your Video</h1>
-      <p>Answer these questions (45 seconds max):</p>
-      <ul>
-        <li>What’s your favorite Disney character?</li>
-        <li>If you could master one skill instantly, what would it be and why?</li>
-        <li>What’s your favorite way to spend a free afternoon?</li>
+    <div
+      style={{
+        maxWidth: "360px",
+        margin: "0 auto",
+        padding: "20px",
+        minHeight: "100vh",
+        backgroundColor: "#ffffff",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+      }}
+    >
+      <h1
+        style={{
+          fontSize: "28px",
+          fontWeight: "700",
+          color: "#1a237e",
+          marginBottom: "16px",
+          textAlign: "center",
+        }}
+      >
+        Record Your Video
+      </h1>
+      <p
+        style={{
+          fontSize: "16px",
+          color: "#455a64",
+          marginBottom: "24px",
+          textAlign: "center",
+        }}
+      >
+        Answer these questions (45 seconds max):
+      </p>
+      <ul
+        style={{
+          listStyleType: "none",
+          padding: 0,
+          marginBottom: "32px",
+        }}
+      >
+        <li
+          style={{
+            fontSize: "16px",
+            color: "#333",
+            marginBottom: "12px",
+            paddingLeft: "12px",
+            borderLeft: "3px solid #0288d1",
+          }}
+        >
+          What’s your favorite Disney character?
+        </li>
+        <li
+          style={{
+            fontSize: "16px",
+            color: "#333",
+            marginBottom: "12px",
+            paddingLeft: "12px",
+            borderLeft: "3px solid #0288d1",
+          }}
+        >
+          If you could master one skill instantly, what would it be and why?
+        </li>
+        <li
+          style={{
+            fontSize: "16px",
+            color: "#333",
+            marginBottom: "12px",
+            paddingLeft: "12px",
+            borderLeft: "3px solid #0288d1",
+          }}
+        >
+          What’s your favorite way to spend a free afternoon?
+        </li>
       </ul>
       <Recorder onRecordingComplete={handleRecordingComplete} />
     </div>
