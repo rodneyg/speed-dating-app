@@ -1,26 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Mux } from "@mux/mux-node";
-
-const mux = new Mux({
-  tokenId: process.env.MUX_TOKEN_ID!,
-  tokenSecret: process.env.MUX_TOKEN_SECRET!
-});
-const { video } = mux;
+import connectToDatabase from "@/lib/mongodb";
+import Video from "@/lib/video.model";
 
 export async function GET(_req: NextRequest) {
-    console.log("GET /api/get-feed called");
     try {
-      const assetsResponse = await video.assets.list({ limit: 10 });
-      const assets = assetsResponse.data;
-      console.log("Assets fetched:", assets.length);
-      const videos = assets.map((asset: any) => {
-        const playbackUrl = `https://stream.mux.com/${asset.playback_ids![0].id}.m3u8`;
-        console.log("Asset ID:", asset.id, "Status:", asset.status, "URL:", playbackUrl);
-        return { playbackUrl };
-      });
-      return NextResponse.json(videos);
+        await connectToDatabase();
+
+        console.log("GET /api/get-feed called - fetching videos from MongoDB");
+
+        // Only fetch videos that are ready to play
+        const videosFromDb = await Video.find({ status: "ready", playbackId: { $exists: true, $ne: null } })
+            .sort({ uploadDate: -1 })
+            .limit(10)
+            .exec();
+
+        console.log("Videos fetched from MongoDB:", videosFromDb.length);
+
+        const videos = videosFromDb.map((videoDoc) => {
+            const playbackUrl = `https://stream.mux.com/${videoDoc.playbackId}.m3u8`;
+            console.log("Constructed playbackUrl:", playbackUrl);
+            return {
+                id: videoDoc._id,
+                playbackUrl: playbackUrl,
+                muxAssetId: videoDoc.muxAssetId,
+                uploadDate: videoDoc.uploadDate,
+                userId: videoDoc.userId,
+            };
+        });
+
+        return NextResponse.json(videos);
+
     } catch (error) {
-      console.error("Mux fetch error:", error);
-      return NextResponse.json({ error: "Failed to fetch videos" }, { status: 500 });
+        console.error("Error in /api/get-feed:", error);
+        return NextResponse.json({ error: "Failed to fetch videos from MongoDB" }, { status: 500 });
     }
-  }
+}
