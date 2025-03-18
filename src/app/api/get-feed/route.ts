@@ -8,17 +8,19 @@ const mux = new Mux({
 const { video } = mux;
 
 export async function GET(_req: NextRequest) {
-  console.log("GET /api/get-feed called");
-  try {
-    const assetsResponse = await video.assets.list({ limit: 10 });
-    const assets = assetsResponse.data; // Access the 'data' array
-    console.log("Assets fetched:", assets.length);
-    const videos = assets.map((asset: any) => ({ // Temporary 'any' for now
-      playbackUrl: `https://stream.mux.com/${asset.playback_ids![0].id}.m3u8`,
-    }));
-    return NextResponse.json(videos);
-  } catch (error) {
-    console.error("Mux fetch error:", error);
-    return NextResponse.json({ error: "Failed to fetch videos" }, { status: 500 });
+    console.log("GET /api/get-feed called");
+    try {
+      const assetsResponse = await video.assets.list({ limit: 10 });
+      const assets = assetsResponse.data;
+      console.log("Assets fetched:", assets.length);
+      const videos = assets.map((asset: any) => {
+        const playbackUrl = `https://stream.mux.com/${asset.playback_ids![0].id}.m3u8`;
+        console.log("Asset ID:", asset.id, "Status:", asset.status, "URL:", playbackUrl);
+        return { playbackUrl };
+      });
+      return NextResponse.json(videos);
+    } catch (error) {
+      console.error("Mux fetch error:", error);
+      return NextResponse.json({ error: "Failed to fetch videos" }, { status: 500 });
+    }
   }
-}
