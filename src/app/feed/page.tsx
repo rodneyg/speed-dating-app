@@ -3,84 +3,183 @@
 import { useEffect, useState, useRef } from "react";
 import Hls from "hls.js";
 
+interface Video {
+  id: string;
+  playbackUrl: string;
+  uploadDate: string;
+  userId: string;
+}
+
 const FeedPage = () => {
-    const [videos, setVideos] = useState<string[]>([]);
-    const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const [videos, setVideos] = useState<Video[]>([]);
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetch("/api/get-feed")
-            .then((res) => {
-                console.log("Response Status:", res.status);
-                console.log("Response OK:", res.ok);
-                return res.text();
-            })
-            .then((text) => {
-                console.log("Raw Response:", text);
-                const data = JSON.parse(text);
-                setVideos(data.map((v: any) => v.playbackUrl));
-            })
-            .catch((err) => console.error("Fetch Error:", err));
-    }, []);
+  const fetchVideos = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/get-feed");
+      
+      if (!res.ok) {
+        throw new Error(`Failed to fetch videos: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      console.log("Videos received:", data);
+      setVideos(data);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching videos:", err);
+      setError("Failed to load videos. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    useEffect(() => {
-        videos.forEach((url, index) => {
-            const video = videoRefs.current[index];
-            if (video && Hls.isSupported()) {
-                const hls = new Hls();
-                hls.loadSource(url);
-                hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    console.log(`HLS ready for video ${index}`);
-                });
-            } else if (video && video.canPlayType("application/vnd.apple.mpegurl")) {
-                video.src = url;
+  useEffect(() => {
+    fetchVideos();
+    
+    // Auto-refresh every 30 seconds
+    const refreshInterval = setInterval(() => {
+      console.log("Auto-refreshing feed...");
+      fetchVideos();
+    }, 30000);
+    
+    return () => clearInterval(refreshInterval);
+  }, []);
+
+  useEffect(() => {
+    if (videos.length > 0) {
+      videos.forEach((video, index) => {
+        const videoElement = videoRefs.current[index];
+        if (!videoElement) return;
+        
+        if (Hls.isSupported()) {
+          const hls = new Hls({ 
+            enableWorker: true,
+            lowLatencyMode: true,
+            debug: false 
+          });
+          
+          hls.loadSource(video.playbackUrl);
+          hls.attachMedia(videoElement);
+          
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            console.log(`HLS manifest parsed for video ${index}`);
+            videoElement.play().catch(e => console.log("Auto-play prevented:", e));
+          });
+          
+          hls.on(Hls.Events.ERROR, (event, data) => {
+            console.error(`HLS error for video ${index}:`, data);
+            if (data.fatal) {
+              switch(data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR:
+                  console.log("Network error, trying to recover...");
+                  hls.startLoad();
+                  break;
+                case Hls.ErrorTypes.MEDIA_ERROR:
+                  console.log("Media error, trying to recover...");
+                  hls.recoverMediaError();
+                  break;
+                default:
+                  console.log("Fatal error, cannot recover");
+                  hls.destroy();
+                  break;
+              }
             }
-        });
-    }, [videos]);
+          });
+          
+        } else if (videoElement.canPlayType("application/vnd.apple.mpegurl")) {
+          // For Safari which has built-in HLS support
+          videoElement.src = video.playbackUrl;
+        }
+      });
+    }
+  }, [videos]);
 
-    return (
-        <div style={{
-            height: '100vh',
-            overflowY: 'scroll',
-            scrollSnapType: 'y mandatory',
-            padding: '20px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            backgroundColor: '#f0f2f5' // Light gray background - modern and subtle
+  const handleManualRefresh = () => {
+    fetchVideos();
+  };
+
+  return (
+    <div style={{ 
+      maxWidth: "600px", 
+      margin: "0 auto", 
+      padding: "20px" 
+    }}>
+      <div style={{ 
+        display: "flex", 
+        justifyContent: "space-between", 
+        alignItems: "center",
+        marginBottom: "20px" 
+      }}>
+        <h1 style={{ fontSize: "24px" }}>Video Feed</h1>
+        <button 
+          onClick={handleManualRefresh}
+          disabled={loading}
+          style={{
+            padding: "8px 16px",
+            backgroundColor: "#0070f3",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: loading ? "not-allowed" : "pointer"
+          }}
+        >
+          {loading ? "Refreshing..." : "Refresh"}
+        </button>
+      </div>
+      
+      {loading && <p>Loading videos...</p>}
+      
+      {error && (
+        <div style={{ 
+          padding: "10px", 
+          backgroundColor: "#ffdddd", 
+          border: "1px solid #ff0000",
+          borderRadius: "4px",
+          marginBottom: "20px"
         }}>
-            <h1 style={{
-                textAlign: 'center',
-                fontSize: '2.5em',
-                marginBottom: '20px',
-                color: '#222' // Slightly darker title color for better contrast
-            }}>Video Feed</h1>
-            {videos.length === 0 ? (
-                <p style={{ color: '#555' }}>No videos yet</p>  // Slightly darker "No videos yet" text
-            ) : (
-                videos.map((url, index) => (
-                    <div key={index} style={{
-                        marginBottom: '20px',
-                        width: '100%',
-                        maxWidth: 'none'
-                    }}>
-                        <video
-                            ref={(el) => (videoRefs.current[index] = el)}
-                            controls
-                            width="100%"
-                            style={{
-                                height: '100vh',
-                                scrollSnapAlign: 'start',
-                                display: 'block',
-                                borderRadius: '8px',
-                                boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-                            }}
-                        />
-                    </div>
-                ))
-            )}
+          {error}
         </div>
-    );
+      )}
+      
+      {!loading && !error && videos.length === 0 && (
+        <p>No videos available yet. Be the first to upload!</p>
+      )}
+      
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        {videos.map((video, index) => (
+          <div 
+            key={video.id} 
+            style={{ 
+              border: "1px solid #eaeaea",
+              borderRadius: "8px",
+              overflow: "hidden"
+            }}
+          >
+            <video
+              ref={(el) => (videoRefs.current[index] = el)}
+              controls
+              playsInline
+              style={{ 
+                width: "100%", 
+                height: "auto",
+                backgroundColor: "#000",
+                display: "block"
+              }}
+            />
+            <div style={{ padding: "10px" }}>
+              <p style={{ fontSize: "12px", color: "#666" }}>
+                Uploaded: {new Date(video.uploadDate).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 };
 
 export default FeedPage;
