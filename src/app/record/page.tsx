@@ -1,48 +1,23 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useReactMediaRecorder } from "react-media-recorder";
+import dynamic from "next/dynamic";
+
+// Dynamically import the Recorder component with SSR disabled
+const Recorder = dynamic(() => import("../../components/Recorder"), {
+  ssr: false,
+});
 
 const RecordPage = () => {
   const router = useRouter();
-  const { status, startRecording, stopRecording, mediaBlobUrl } =
-    useReactMediaRecorder({ video: true });
 
-  const [timeLeft, setTimeLeft] = useState(45);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const startTimer = () => {
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          stopRecording();
-          clearInterval(timerRef.current!);
-          return 45;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  const handleStart = () => {
-    startRecording();
-    startTimer();
-  };
-
-  const handleStop = () => {
-    stopRecording();
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
+  const handleRecordingComplete = (blobUrl: string | null) => {
+    console.log("Blob URL from Recorder:", blobUrl);
+    if (blobUrl) {
+      localStorage.setItem("recordedVideoUrl", blobUrl);
+      router.push("/review");
     }
-    setTimeLeft(45);
   };
-
-  useEffect(() => {
-    if (status === "stopped" && mediaBlobUrl) {
-      router.push(`/review?videoUrl=${encodeURIComponent(mediaBlobUrl)}`);
-    }
-  }, [status, mediaBlobUrl, router]);
 
   return (
     <div>
@@ -53,15 +28,7 @@ const RecordPage = () => {
         <li>If you could master one skill instantly, what would it be and why?</li>
         <li>What’s your favorite way to spend a free afternoon?</li>
       </ul>
-      <p>Status: {status}</p>
-      {status !== "recording" ? (
-        <button onClick={handleStart}>Start Recording</button>
-      ) : (
-        <div>
-          <button onClick={handleStop}>Stop Recording</button>
-          <p>Time left: {timeLeft} seconds</p>
-        </div>
-      )}
+      <Recorder onRecordingComplete={handleRecordingComplete} />
     </div>
   );
 };
