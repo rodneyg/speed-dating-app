@@ -1,26 +1,37 @@
 import mongoose, { Schema } from 'mongoose';
 
 const videoSchema = new Schema({
-    muxAssetId: {
+    muxUploadId: {
         type: String,
         required: true,
-        unique: true, // Ensure each Mux Asset ID is unique in our DB
+        unique: true,
+    },
+    muxAssetId: {
+        type: String,
+        required: false,
+        // Remove unique constraint or make it sparse
+        index: { unique: true, sparse: true }
     },
     playbackId: {
-        type: String, // Store the Mux Playback ID for easier access
+        type: String,
+        required: false,
     },
     userId: {
-        type: String, // Basic user identification for now
+        type: String,
         default: 'anonymous',
+    },
+    status: {
+        type: String,
+        enum: ['uploading', 'processing', 'ready', 'error'],
+        default: 'uploading',
     },
     uploadDate: {
         type: Date,
-        default: Date.now, // Automatically set upload date
+        default: Date.now,
     },
-    // We can add more fields later, like title, description, etc.
 });
 
-// Define the model if it hasn't been defined yet, or use the existing one
+// Make sure we're not redefining the model if it already exists
 const Video = mongoose.models.Video || mongoose.model('Video', videoSchema);
 
 export default Video;
