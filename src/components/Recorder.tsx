@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo, useLayoutEffect } from "react";
 import { useReactMediaRecorder } from "react-media-recorder";
 
 type RecorderProps = {
@@ -8,53 +8,52 @@ type RecorderProps = {
 };
 
 const Recorder = ({ onRecordingComplete }: RecorderProps) => {
-  const { status, startRecording, stopRecording, mediaBlobUrl, previewStream } =
+  const { status, startRecording, stopRecording, mediaBlobUrl, previewStream, error } =
     useReactMediaRecorder({ video: true, audio: true });
-  const [timeLeft, setTimeLeft] = useState(45);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  // Timer logic
-  const startTimer = () => {
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          stopRecording();
-          clearInterval(timerRef.current!);
-          return 45;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
+  const videoElement = useMemo(
+    () => (
+      <video
+        ref={videoRef}
+        style={{
+          display: status === "recording" ? "block" : "none",
+          width: "100%",
+          maxHeight: "240px",
+          borderRadius: "8px",
+          backgroundColor: "#000",
+          objectFit: "cover",
+        }}
+        muted
+      />
+    ),
+    [status]
+  );
 
-  const handleStart = () => {
-    startRecording();
-    startTimer();
-  };
-
-  const handleStop = () => {
-    stopRecording();
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-    setTimeLeft(45);
-  };
-
-  // Pass completed recording to parent
   useEffect(() => {
     if (status === "stopped" && mediaBlobUrl) {
       onRecordingComplete(mediaBlobUrl);
     }
   }, [status, mediaBlobUrl, onRecordingComplete]);
 
-  // Attach live preview stream to video element
-  useEffect(() => {
-    if (videoRef.current && previewStream) {
-      videoRef.current.srcObject = previewStream;
-      videoRef.current.play().catch((e) => console.log("Preview play error:", e));
+  useLayoutEffect(() => {
+    const video = videoRef.current;
+    if (video && previewStream && status === "recording") {
+      video.srcObject = previewStream;
+      video.play().catch((e) => console.log("Preview play error:", e));
+    } else if (video && video.srcObject) {
+      const tracks = video.srcObject as MediaStream;
+      tracks.getTracks().forEach((track) => track.stop());
+      video.srcObject = null;
     }
-  }, [previewStream]);
+    return () => {
+      if (video && video.srcObject) {
+        const tracks = video.srcObject as MediaStream;
+        tracks.getTracks().forEach((track) => track.stop());
+        video.srcObject = null;
+      }
+    };
+  }, [previewStream, status]);
 
   const getStatusText = (status: string) => {
     switch (status) {
@@ -71,6 +70,29 @@ const Recorder = ({ onRecordingComplete }: RecorderProps) => {
     }
   };
 
+  if (error) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "20px",
+          padding: "20px",
+          backgroundColor: "#f0f0f0",
+          borderRadius: "10px",
+          boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
+          maxWidth: "320px",
+          margin: "0 auto",
+        }}
+      >
+        <p style={{ color: "#d32f2f", fontSize: "18px" }}>
+          Error: {error === "permission_denied" ? "Camera access denied. Please enable it in Settings." : error}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -86,19 +108,7 @@ const Recorder = ({ onRecordingComplete }: RecorderProps) => {
         margin: "0 auto",
       }}
     >
-      {status === "recording" && (
-        <video
-          ref={videoRef}
-          style={{
-            width: "100%",
-            maxHeight: "240px",
-            borderRadius: "8px",
-            backgroundColor: "#000",
-            objectFit: "cover",
-          }}
-          muted // Mute to avoid feedback loop
-        />
-      )}
+      {videoElement}
       <p
         style={{
           fontSize: "18px",
@@ -110,7 +120,7 @@ const Recorder = ({ onRecordingComplete }: RecorderProps) => {
       </p>
       {status !== "recording" ? (
         <button
-          onClick={handleStart}
+          onClick={startRecording}
           style={{
             padding: "12px 24px",
             fontSize: "16px",
@@ -123,53 +133,41 @@ const Recorder = ({ onRecordingComplete }: RecorderProps) => {
             transition: "background-color 0.3s",
           }}
           onMouseOver={(e) => {
-            const button = e.target as HTMLButtonElement;
-            button.style.backgroundColor = "#2e7d32";
+            const target = e.target as HTMLButtonElement;
+            target.style.backgroundColor = "#2e7d32";
           }}
           onMouseOut={(e) => {
-            const button = e.target as HTMLButtonElement;
-            button.style.backgroundColor = "#388e3c";
+            const target = e.target as HTMLButtonElement;
+            target.style.backgroundColor = "#388e3c";
           }}
         >
           Start Recording
         </button>
       ) : (
-        <div
+        <button
+          onClick={stopRecording}
           style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "10px",
+            padding: "12px 24px",
+            fontSize: "16px",
+            fontWeight: "600",
+            color: "white",
+            backgroundColor: "#d32f2f",
+            border: "none",
+            borderRadius: "8px",
+            cursor: "pointer",
+            transition: "background-color 0.3s",
+          }}
+          onMouseOver={(e) => {
+            const target = e.target as HTMLButtonElement;
+            target.style.backgroundColor = "#c62828";
+          }}
+          onMouseOut={(e) => {
+            const target = e.target as HTMLButtonElement;
+            target.style.backgroundColor = "#d32f2f";
           }}
         >
-          <button
-            onClick={handleStop}
-            style={{
-              padding: "12px 24px",
-              fontSize: "16px",
-              fontWeight: "600",
-              color: "white",
-              backgroundColor: "#d32f2f",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-              transition: "background-color 0.3s",
-            }}
-            onMouseOver={(e) => {
-              const button = e.target as HTMLButtonElement;
-              button.style.backgroundColor = "#c62828";
-            }}
-            onMouseOut={(e) => {
-              const button = e.target as HTMLButtonElement;
-              button.style.backgroundColor = "#d32f2f";
-            }}
-          >
-            Stop Recording
-          </button>
-          <p style={{ fontSize: "16px", color: "#333" }}>
-            {timeLeft} seconds left
-          </p>
-        </div>
+          Stop Recording
+        </button>
       )}
     </div>
   );
