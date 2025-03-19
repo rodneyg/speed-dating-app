@@ -126,8 +126,8 @@ const ReviewPage = () => {
             cursor: "pointer",
             transition: "background-color 0.3s",
           }}
-          onMouseOver={(e) => (e.target.style.backgroundColor = "#c8e6c9")}
-          onMouseOut={(e) => (e.target.style.backgroundColor = "#e8f5e9")}
+          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#c8e6c9")}
+          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#e8f5e9")}
         >
           Re-record
         </button>
@@ -147,10 +147,10 @@ const ReviewPage = () => {
             transition: "background-color 0.3s",
           }}
           onMouseOver={(e) =>
-            !uploading && (e.target.style.backgroundColor = "#0277bd")
+            !uploading && (e.currentTarget.style.backgroundColor = "#0277bd")
           }
           onMouseOut={(e) =>
-            !uploading && (e.target.style.backgroundColor = "#0288d1")
+            !uploading && (e.currentTarget.style.backgroundColor = "#0288d1")
           }
         >
           {uploading ? "Uploading..." : "Upload"}
