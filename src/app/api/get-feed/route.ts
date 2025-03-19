@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Video from "@/lib/video.model";
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
     try {
         await connectToDatabase();
 
