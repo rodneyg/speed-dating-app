@@ -55,12 +55,14 @@ export default function Home() {
           touchAction: "manipulation", // Better touch response
         }}
         onMouseOver={(e) => {
-          e.target.style.backgroundColor = "#0277bd";
-          e.target.style.transform = "scale(1.05)";
+          const btn = e.target as HTMLButtonElement;
+          btn.style.backgroundColor = "#0277bd";
+          btn.style.transform = "scale(1.05)";
         }}
         onMouseOut={(e) => {
-          e.target.style.backgroundColor = "#0288d1";
-          e.target.style.transform = "scale(1)";
+          const btn = e.target as HTMLButtonElement;
+          btn.style.backgroundColor = "#0288d1";
+          btn.style.transform = "scale(1)";
         }}
       >
         Start Recording
