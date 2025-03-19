@@ -137,7 +137,9 @@ const FeedPage = () => {
           }}
         >
           <video
-            ref={(el) => (videoRefs.current[index] = el)}
+            ref={(el) => {
+              videoRefs.current[index] = el || null;
+            }}
             controls
             playsInline
             muted
