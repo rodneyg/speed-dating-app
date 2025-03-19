@@ -137,8 +137,8 @@ const FeedPage = () => {
           }}
         >
           <video
-            ref={(el) => {
-              videoRefs.current[index] = el || null;
+            ref={(el): void => {
+              videoRefs.current[index] = el;
             }}
             controls
             playsInline
@@ -150,6 +150,7 @@ const FeedPage = () => {
               backgroundColor: "#000",
             }}
           />
+
           <div
             style={{
               position: "absolute",
