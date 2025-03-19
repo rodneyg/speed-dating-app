@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Hls from "hls.js";
 import moment from "moment";
 import { useRouter } from "next/navigation";
@@ -19,6 +19,15 @@ const FeedPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  // Create a properly typed ref callback using useCallback
+  const setVideoRef = useCallback((element: HTMLVideoElement | null, index: number) => {
+    if (videoRefs.current.length <= index) {
+      // Ensure the array has enough slots
+      videoRefs.current = [...videoRefs.current, ...Array(index + 1 - videoRefs.current.length).fill(null)];
+    }
+    videoRefs.current[index] = element;
+  }, []);
 
   const fetchVideos = async () => {
     try {
@@ -137,9 +146,7 @@ const FeedPage = () => {
           }}
         >
           <video
-            ref={(el): void => {
-              videoRefs.current[index] = el;
-            }}
+            ref={el => setVideoRef(el, index)}
             controls
             playsInline
             muted
@@ -181,6 +188,7 @@ const FeedPage = () => {
         background: "rgba(0,0,0,0.8)",
         padding: "16px",
         borderRadius: "8px",
+        display: (loading || error) ? "block" : "none",
       }}>
         {loading && <p>Loading videos...</p>}
         {error && <p>{error}</p>}
