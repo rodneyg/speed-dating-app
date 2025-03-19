@@ -122,8 +122,14 @@ const Recorder = ({ onRecordingComplete }: RecorderProps) => {
             cursor: "pointer",
             transition: "background-color 0.3s",
           }}
-          onMouseOver={(e) => (e.target.style.backgroundColor = "#2e7d32")}
-          onMouseOut={(e) => (e.target.style.backgroundColor = "#388e3c")}
+          onMouseOver={(e) => {
+            const button = e.target as HTMLButtonElement;
+            button.style.backgroundColor = "#2e7d32";
+          }}
+          onMouseOut={(e) => {
+            const button = e.target as HTMLButtonElement;
+            button.style.backgroundColor = "#388e3c";
+          }}
         >
           Start Recording
         </button>
@@ -149,8 +155,14 @@ const Recorder = ({ onRecordingComplete }: RecorderProps) => {
               cursor: "pointer",
               transition: "background-color 0.3s",
             }}
-            onMouseOver={(e) => (e.target.style.backgroundColor = "#c62828")}
-            onMouseOut={(e) => (e.target.style.backgroundColor = "#d32f2f")}
+            onMouseOver={(e) => {
+              const button = e.target as HTMLButtonElement;
+              button.style.backgroundColor = "#c62828";
+            }}
+            onMouseOut={(e) => {
+              const button = e.target as HTMLButtonElement;
+              button.style.backgroundColor = "#d32f2f";
+            }}
           >
             Stop Recording
           </button>
