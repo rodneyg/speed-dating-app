@@ -22,7 +22,6 @@ const RecordPage = () => {
   return (
     <div
       style={{
-        maxWidth: "360px",
         margin: "0 auto",
         padding: "20px",
         minHeight: "100vh",

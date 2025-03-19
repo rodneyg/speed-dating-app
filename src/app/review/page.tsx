@@ -56,14 +56,14 @@ const ReviewPage = () => {
     return (
       <div
         style={{
-          maxWidth: "320px",
-          margin: "0 auto",
+          width: "100%",
           padding: "20px",
           minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
           textAlign: "center",
+          boxSizing: "border-box",
         }}
       >
         <p style={{ fontSize: "18px", color: "#666" }}>No video found</p>
@@ -73,14 +73,14 @@ const ReviewPage = () => {
   return (
     <div
       style={{
-        maxWidth: "320px",
-        margin: "0 auto",
+        width: "100%",
         padding: "20px",
         minHeight: "100vh",
         backgroundColor: "#ffffff",
         display: "flex",
         flexDirection: "column",
         gap: "20px",
+        boxSizing: "border-box",
       }}
     >
       <h1

@@ -25,6 +25,8 @@ const Recorder = ({ onRecordingComplete }: RecorderProps) => {
           objectFit: "cover",
         }}
         muted
+        playsInline
+        webkit-playsinline="true"
       />
     ),
     [status]
@@ -41,6 +43,12 @@ const Recorder = ({ onRecordingComplete }: RecorderProps) => {
     if (video && previewStream && status === "recording") {
       video.srcObject = previewStream;
       video.play().catch((e) => console.log("Preview play error:", e));
+
+      if (video) {
+        video.addEventListener("webkitbeginfullscreen", (e) => {
+          e.preventDefault();
+        });
+      }
     } else if (video && video.srcObject) {
       const tracks = video.srcObject as MediaStream;
       tracks.getTracks().forEach((track) => track.stop());
@@ -74,6 +82,7 @@ const Recorder = ({ onRecordingComplete }: RecorderProps) => {
     return (
       <div
         style={{
+          width: "100%",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -82,8 +91,7 @@ const Recorder = ({ onRecordingComplete }: RecorderProps) => {
           backgroundColor: "#f0f0f0",
           borderRadius: "10px",
           boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
-          maxWidth: "320px",
-          margin: "0 auto",
+          boxSizing: "border-box",
         }}
       >
         <p style={{ color: "#d32f2f", fontSize: "18px" }}>
@@ -96,6 +104,7 @@ const Recorder = ({ onRecordingComplete }: RecorderProps) => {
   return (
     <div
       style={{
+        width: "100%",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -104,8 +113,7 @@ const Recorder = ({ onRecordingComplete }: RecorderProps) => {
         backgroundColor: "#f0f0f0",
         borderRadius: "10px",
         boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
-        maxWidth: "320px",
-        margin: "0 auto",
+        boxSizing: "border-box",
       }}
     >
       {videoElement}
