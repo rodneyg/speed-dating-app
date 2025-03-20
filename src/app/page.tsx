@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { MouseEvent } from "react"; // Import MouseEvent from react
 
 export default function Home() {
   const router = useRouter();
@@ -88,18 +89,17 @@ export default function Home() {
 }
 
 // Reusable button hover and normal style functions (for DRY code)
-const buttonHover = (e: any) => {
+const buttonHover = (e: MouseEvent<HTMLButtonElement>) => {
   const btn = e.target as HTMLButtonElement;
   btn.style.backgroundColor = shadeColor(btn.style.backgroundColor, -20); // Darken on hover
   btn.style.transform = "scale(1.05)";
 };
 
-const buttonNormal = (e: any) => {
+const buttonNormal = (e: MouseEvent<HTMLButtonElement>) => {
   const btn = e.target as HTMLButtonElement;
   btn.style.backgroundColor = originalButtonColor(btn); // Revert to original color
   btn.style.transform = "scale(1)";
 };
-
 
 // Utility function to shade color (for hover effect)
 function shadeColor(color: string, percent: number) {
