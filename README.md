@@ -23,8 +23,7 @@ You'll need:
 
 1. **Clone the repo:**
    ```bash
-   git clone <YOUR_REPOSITORY_URL>
-   cd <REPOSITORY_FOLDER>
+   git clone https://github.com/rodneyg/speed-dating-app
    ```
 
 2. **Install dependencies:**
