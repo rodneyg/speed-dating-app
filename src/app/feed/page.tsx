@@ -32,6 +32,8 @@ const FeedPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const touchStartY = useRef<number | null>(null);
+  const touchCurrentY = useRef<number>(0);
 
   // Load cached videos from localStorage on mount
   useEffect(() => {
@@ -135,6 +137,28 @@ const FeedPage = () => {
     }
   };
 
+  // Swipe-to-close handlers
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    touchStartY.current = e.touches[0].clientY;
+    touchCurrentY.current = 0;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartY.current === null) return;
+    const currentY = e.touches[0].clientY;
+    touchCurrentY.current = currentY - touchStartY.current;
+    e.currentTarget.style.transform = `translateY(${touchCurrentY.current}px)`;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartY.current === null) return;
+    if (touchCurrentY.current > 100) { // Swipe down threshold
+      setShowComments(null);
+    }
+    e.currentTarget.style.transform = "translateY(0)";
+    touchStartY.current = null;
+  };
+
   useEffect(() => {
     fetchVideos();
   }, []);
@@ -197,7 +221,7 @@ const FeedPage = () => {
         </button>
       </div>
 
-      {/* Home Button (Moved Up) */}
+      {/* Home Button */}
       <div
         style={{
           position: "fixed",
@@ -249,11 +273,11 @@ const FeedPage = () => {
               }}
             />
 
-            {/* Video Metadata */}
+            {/* Video Metadata - Aligned with refresh button's center */}
             <div
               style={{
                 position: "absolute",
-                top: "20px",
+                top: "42px", // Refresh button center at 42px (20px + 44px/2)
                 left: "20px",
                 background: "rgba(0, 0, 0, 0.7)",
                 padding: "8px 12px",
@@ -262,6 +286,8 @@ const FeedPage = () => {
                 fontSize: "14px",
                 backdropFilter: "blur(4px)",
                 maxWidth: "80%",
+                lineHeight: "1.5",
+                transform: "translateY(-50%)", // Center vertically
               }}
             >
               Uploaded {moment(video.uploadDate).fromNow()} by {video.userId}
@@ -316,7 +342,7 @@ const FeedPage = () => {
               </button>
             </div>
 
-            {/* Comments Overlay */}
+            {/* Comments Overlay - No close button, swipe-to-close only */}
             {showComments === video.id && (
               <div
                 style={{
@@ -324,69 +350,68 @@ const FeedPage = () => {
                   bottom: "0",
                   left: "0",
                   right: "0",
-                  background: "rgba(0, 0, 0, 0.7)",
+                  background: "rgba(0, 0, 0, 0.8)",
                   padding: "20px",
                   zIndex: 200,
                   maxHeight: "50vh",
                   overflowY: "auto",
                   backdropFilter: "blur(4px)",
+                  borderTopLeftRadius: "12px",
+                  borderTopRightRadius: "12px",
+                  transition: "transform 0.2s ease-out",
                 }}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
               >
-                <button
-                  onClick={() => setShowComments(null)}
-                  style={{
-                    position: "absolute",
-                    top: "10px",
-                    right: "10px",
-                    background: "transparent",
-                    border: "none",
-                    color: "#fff",
-                    cursor: "pointer",
-                  }}
-                >
-                  Close
-                </button>
-                <div style={{ marginBottom: "20px" }}>
+                {/* Add Comment Section */}
+                <div style={{ marginTop: "20px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
                   <input
                     type="text"
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder="Add a comment..."
                     style={{
-                      width: "100%",
-                      padding: "10px",
+                      flex: 1,
+                      padding: "12px",
                       borderRadius: "8px",
                       border: "none",
                       background: "rgba(255, 255, 255, 0.1)",
                       color: "#fff",
+                      fontSize: "14px",
                     }}
                   />
                   <button
                     onClick={() => handleAddComment(video.id)}
                     style={{
-                      marginTop: "10px",
-                      padding: "10px 20px",
+                      padding: "12px 20px",
                       backgroundColor: "#0288d1",
                       color: "white",
                       border: "none",
                       borderRadius: "8px",
                       cursor: "pointer",
+                      fontSize: "14px",
                     }}
                   >
                     Post
                   </button>
                 </div>
-                <div>
+
+                {/* Comments List */}
+                <div style={{ marginTop: "20px" }}>
                   {(comments[video.id] || []).map((comment) => (
                     <div
                       key={comment._id}
                       style={{
-                        padding: "10px 0",
+                        padding: "12px 0",
                         borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "4px",
                       }}
                     >
-                      <p style={{ color: "#fff", margin: "0" }}>{comment.text}</p>
-                      <p style={{ color: "#aaa", fontSize: "12px", margin: "5px 0 0" }}>
+                      <p style={{ color: "#fff", margin: "0", fontSize: "14px" }}>{comment.text}</p>
+                      <p style={{ color: "#aaa", fontSize: "12px", margin: "0" }}>
                         {moment(comment.createdAt).fromNow()} by {comment.userId}
                       </p>
                     </div>
