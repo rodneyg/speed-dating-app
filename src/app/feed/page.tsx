@@ -15,15 +15,30 @@ interface Video {
 
 const FeedPage = () => {
   const [videos, setVideos] = useState<Video[]>([]);
+  const [cachedVideos, setCachedVideos] = useState<Video[]>([]); // Store cached data
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  // Load cached videos from localStorage on mount
+  useEffect(() => {
+    const storedVideos = localStorage.getItem("cachedVideos");
+    if (storedVideos) {
+      const parsedVideos = JSON.parse(storedVideos);
+      setCachedVideos(parsedVideos);
+      // If we're offline, use cached videos immediately
+      if (!navigator.onLine) {
+        setVideos(parsedVideos);
+        setError("You are offline. Showing cached videos.");
+        setLoading(false);
+      }
+    }
+  }, []);
+
   // Create a properly typed ref callback using useCallback
   const setVideoRef = useCallback((element: HTMLVideoElement | null, index: number) => {
     if (videoRefs.current.length <= index) {
-      // Ensure the array has enough slots
       videoRefs.current = [...videoRefs.current, ...Array(index + 1 - videoRefs.current.length).fill(null)];
     }
     videoRefs.current[index] = element;
@@ -36,12 +51,20 @@ const FeedPage = () => {
       if (!res.ok) throw new Error(`Failed to fetch videos: ${res.status}`);
       const data = await res.json();
       setVideos(data);
+      setCachedVideos(data); // Update cache on successful fetch
+      localStorage.setItem("cachedVideos", JSON.stringify(data)); // Persist to localStorage
       setError(null);
     } catch (err) {
       console.error("Error fetching videos:", err);
-      setError("Failed to load videos. Please try again later.");
+      // Fallback to cached data if available
+      if (cachedVideos.length > 0) {
+        setVideos(cachedVideos);
+        setError("You are offline. Showing cached videos.");
+      } else {
+        setError("Failed to load videos. Please check your connection and try again.");
+      }
     } finally {
-      setLoading(false);
+      setLoading(false); // Ensure loading is false even if there's an error
     }
   };
 
@@ -88,9 +111,9 @@ const FeedPage = () => {
           zIndex: 100,
         }}
       >
-        <button 
-          onClick={fetchVideos} 
-          disabled={loading} 
+        <button
+          onClick={fetchVideos}
+          disabled={loading}
           aria-label="Refresh"
           style={{
             background: "rgba(0,0,0,0.7)",
@@ -111,13 +134,13 @@ const FeedPage = () => {
       <div
         style={{
           position: "fixed",
-          bottom: "80px", // Increased from 20px to avoid controls
+          bottom: "80px",
           right: "20px",
           zIndex: 100,
         }}
       >
-        <button 
-          onClick={() => router.push("/")} 
+        <button
+          onClick={() => router.push("/")}
           aria-label="Home"
           style={{
             background: "rgba(0,0,0,0.7)",
@@ -135,61 +158,83 @@ const FeedPage = () => {
       </div>
 
       {/* Video Feed */}
-      {videos.map((video, index) => (
-        <div
-          key={video.id}
-          style={{
-            height: "100vh",
-            scrollSnapAlign: "start",
-            position: "relative",
-            overflow: "hidden",
-          }}
-        >
-          <video
-            ref={el => setVideoRef(el, index)}
-            controls
-            playsInline
-            muted
+      {videos.length > 0 ? (
+        videos.map((video, index) => (
+          <div
+            key={video.id}
             style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-              backgroundColor: "#000",
+              height: "100vh",
+              scrollSnapAlign: "start",
+              position: "relative",
+              overflow: "hidden",
             }}
-          />
+          >
+            <video
+              ref={(el) => setVideoRef(el, index)}
+              controls
+              playsInline
+              muted
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                backgroundColor: "#000",
+              }}
+            />
 
+            <div
+              style={{
+                position: "absolute",
+                top: "20px",
+                left: "20px",
+                background: "rgba(0, 0, 0, 0.7)",
+                padding: "8px 12px",
+                borderRadius: "8px",
+                color: "#fff",
+                fontSize: "14px",
+                backdropFilter: "blur(4px)",
+                maxWidth: "80%",
+              }}
+            >
+              Uploaded {moment(video.uploadDate).fromNow()} by {video.userId}
+            </div>
+          </div>
+        ))
+      ) : (
+        !loading && !error && (
           <div
             style={{
               position: "absolute",
-              top: "20px",
-              left: "20px",
-              background: "rgba(0, 0, 0, 0.7)",
-              padding: "8px 12px",
-              borderRadius: "8px",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
               color: "#fff",
-              fontSize: "14px",
-              backdropFilter: "blur(4px)",
-              maxWidth: "80%",
+              background: "rgba(0,0,0,0.8)",
+              padding: "16px",
+              borderRadius: "8px",
+              zIndex: 100,
             }}
           >
-            Uploaded {moment(video.uploadDate).fromNow()} by {video.userId}
+            <p>No videos available yet.</p>
           </div>
-        </div>
-      ))}
+        )
+      )}
 
       {/* Loading/Error States */}
-      <div style={{
-        position: "fixed",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        zIndex: 100,
-        color: "#fff",
-        background: "rgba(0,0,0,0.8)",
-        padding: "16px",
-        borderRadius: "8px",
-        display: (loading || error) ? "block" : "none",
-      }}>
+      <div
+        style={{
+          position: "fixed",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          zIndex: 100,
+          color: "#fff",
+          background: "rgba(0,0,0,0.8)",
+          padding: "16px",
+          borderRadius: "8px",
+          display: loading || error ? "block" : "none",
+        }}
+      >
         {loading && <p>Loading videos...</p>}
         {error && <p>{error}</p>}
       </div>
