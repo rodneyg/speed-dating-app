@@ -4,6 +4,10 @@
 
 I built this TikTok-style video speed dating app where people can record quick intros, then browse other users' videos. It's mobile-first and works in a native WebView, so it can be easily updated and used across platforms.
 
+## Video Demo
+
+https://github.com/user-attachments/assets/cf4bc84c-c86e-4f5e-b618-04fcc4a36103
+
 ## Installation and Getting Started
 
 ### Prerequisites
