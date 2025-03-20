@@ -7,6 +7,7 @@ const ReviewPage = () => {
   const router = useRouter();
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState<string>("none"); // Track the selected filter
 
   useEffect(() => {
     const url = localStorage.getItem("recordedVideoUrl");
@@ -51,6 +52,14 @@ const ReviewPage = () => {
       setUploading(false);
     }
   };
+
+  // Filter options with Instagram-like names
+  const filters = [
+    { name: "None", value: "none" },
+    { name: "Grayscale", value: "grayscale(100%)" },
+    { name: "Glow", value: "sepia(80%) brightness(110%)" },
+    { name: "Haze", value: "blur(3px) brightness(90%)" },
+  ];
 
   if (!videoUrl)
     return (
@@ -103,8 +112,38 @@ const ReviewPage = () => {
           borderRadius: "8px",
           backgroundColor: "#000",
           objectFit: "cover",
+          filter: selectedFilter, // Apply the selected filter to the video preview
         }}
       />
+      {/* Filter Selection */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: "10px",
+          flexWrap: "wrap",
+        }}
+      >
+        {filters.map((filter) => (
+          <button
+            key={filter.name}
+            onClick={() => setSelectedFilter(filter.value)}
+            style={{
+              padding: "8px 16px",
+              fontSize: "14px",
+              fontWeight: "600",
+              color: selectedFilter === filter.value ? "#fff" : "#1a237e",
+              backgroundColor: selectedFilter === filter.value ? "#1a237e" : "#e0f7fa",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+              transition: "background-color 0.3s, color 0.3s",
+            }}
+          >
+            {filter.name}
+          </button>
+        ))}
+      </div>
       <div
         style={{
           display: "flex",
