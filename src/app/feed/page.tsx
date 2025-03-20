@@ -4,18 +4,30 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import Hls from "hls.js";
 import moment from "moment";
 import { useRouter } from "next/navigation";
-import { FaHome, FaRedo } from "react-icons/fa";
+import { FaHome, FaRedo, FaHeart, FaComment } from "react-icons/fa";
 
 interface Video {
   id: string;
   playbackUrl: string;
   uploadDate: string;
   userId: string;
+  likes?: number;
+}
+
+interface Comment {
+  _id: string;
+  text: string;
+  videoId: string;
+  userId: string;
+  createdAt: string;
 }
 
 const FeedPage = () => {
   const [videos, setVideos] = useState<Video[]>([]);
-  const [cachedVideos, setCachedVideos] = useState<Video[]>([]); // Store cached data
+  const [cachedVideos, setCachedVideos] = useState<Video[]>([]);
+  const [comments, setComments] = useState<{ [videoId: string]: Comment[] }>({});
+  const [newComment, setNewComment] = useState<string>("");
+  const [showComments, setShowComments] = useState<string | null>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +39,6 @@ const FeedPage = () => {
     if (storedVideos) {
       const parsedVideos = JSON.parse(storedVideos);
       setCachedVideos(parsedVideos);
-      // If we're offline, use cached videos immediately
       if (!navigator.onLine) {
         setVideos(parsedVideos);
         setError("You are offline. Showing cached videos.");
@@ -36,7 +47,6 @@ const FeedPage = () => {
     }
   }, []);
 
-  // Create a properly typed ref callback using useCallback
   const setVideoRef = useCallback((element: HTMLVideoElement | null, index: number) => {
     if (videoRefs.current.length <= index) {
       videoRefs.current = [...videoRefs.current, ...Array(index + 1 - videoRefs.current.length).fill(null)];
@@ -51,12 +61,11 @@ const FeedPage = () => {
       if (!res.ok) throw new Error(`Failed to fetch videos: ${res.status}`);
       const data = await res.json();
       setVideos(data);
-      setCachedVideos(data); // Update cache on successful fetch
-      localStorage.setItem("cachedVideos", JSON.stringify(data)); // Persist to localStorage
+      setCachedVideos(data);
+      localStorage.setItem("cachedVideos", JSON.stringify(data));
       setError(null);
     } catch (err) {
       console.error("Error fetching videos:", err);
-      // Fallback to cached data if available
       if (cachedVideos.length > 0) {
         setVideos(cachedVideos);
         setError("You are offline. Showing cached videos.");
@@ -64,7 +73,65 @@ const FeedPage = () => {
         setError("Failed to load videos. Please check your connection and try again.");
       }
     } finally {
-      setLoading(false); // Ensure loading is false even if there's an error
+      setLoading(false);
+    }
+  };
+
+  const fetchComments = async (videoId: string) => {
+    try {
+      const res = await fetch(`/api/videos/${videoId}/comments`);
+      if (!res.ok) throw new Error(`Failed to fetch comments: ${res.status}`);
+      const data = await res.json();
+      setComments((prev) => ({ ...prev, [videoId]: data }));
+    } catch (err) {
+      console.error("Error fetching comments:", err);
+      setComments((prev) => ({ ...prev, [videoId]: [] }));
+    }
+  };
+
+  const handleLike = async (videoId: string) => {
+    try {
+      const res = await fetch(`/api/videos/${videoId}/like`, { method: "PATCH" });
+      if (!res.ok) throw new Error(`Failed to like video: ${res.status}`);
+      const { likes } = await res.json();
+      setVideos((prev) =>
+        prev.map((video) =>
+          video.id === videoId ? { ...video, likes: likes || (video.likes || 0) + 1 } : video
+        )
+      );
+    } catch (err) {
+      console.error("Error liking video:", err);
+    }
+  };
+
+  const handleAddComment = async (videoId: string) => {
+    if (!newComment.trim()) return;
+    try {
+      const res = await fetch(`/api/videos/${videoId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: newComment }),
+      });
+      if (!res.ok) throw new Error(`Failed to add comment: ${res.status}`);
+      const addedComment = await res.json();
+      setComments((prev) => ({
+        ...prev,
+        [videoId]: [addedComment, ...(prev[videoId] || [])],
+      }));
+      setNewComment("");
+    } catch (err) {
+      console.error("Error adding comment:", err);
+    }
+  };
+
+  const toggleComments = (videoId: string) => {
+    if (showComments === videoId) {
+      setShowComments(null);
+    } else {
+      setShowComments(videoId);
+      if (!comments[videoId]) {
+        fetchComments(videoId);
+      }
     }
   };
 
@@ -182,6 +249,7 @@ const FeedPage = () => {
               }}
             />
 
+            {/* Video Metadata */}
             <div
               style={{
                 position: "absolute",
@@ -198,6 +266,134 @@ const FeedPage = () => {
             >
               Uploaded {moment(video.uploadDate).fromNow()} by {video.userId}
             </div>
+
+            {/* Like and Comment Buttons */}
+            <div
+              style={{
+                position: "absolute",
+                right: "20px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "20px",
+                zIndex: 100,
+              }}
+            >
+              <button
+                onClick={() => handleLike(video.id)}
+                style={{
+                  background: "rgba(0, 0, 0, 0.7)",
+                  borderRadius: "50%",
+                  padding: "10px",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                aria-label="Like"
+              >
+                <FaHeart size={24} color="#ff4d4f" />
+                <span style={{ color: "#fff", marginLeft: "5px" }}>{video.likes || 0}</span>
+              </button>
+
+              <button
+                onClick={() => toggleComments(video.id)}
+                style={{
+                  background: "rgba(0, 0, 0, 0.7)",
+                  borderRadius: "50%",
+                  padding: "10px",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                aria-label="Comment"
+              >
+                <FaComment size={24} color="#fff" />
+              </button>
+            </div>
+
+            {/* Comments Overlay */}
+            {showComments === video.id && (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: "0",
+                  left: "0",
+                  right: "0",
+                  background: "rgba(0, 0, 0, 0.7)",
+                  padding: "20px",
+                  zIndex: 200,
+                  maxHeight: "50vh",
+                  overflowY: "auto",
+                  backdropFilter: "blur(4px)",
+                }}
+              >
+                <button
+                  onClick={() => setShowComments(null)}
+                  style={{
+                    position: "absolute",
+                    top: "10px",
+                    right: "10px",
+                    background: "transparent",
+                    border: "none",
+                    color: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  Close
+                </button>
+                <div style={{ marginBottom: "20px" }}>
+                  <input
+                    type="text"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Add a comment..."
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      borderRadius: "8px",
+                      border: "none",
+                      background: "rgba(255, 255, 255, 0.1)",
+                      color: "#fff",
+                    }}
+                  />
+                  <button
+                    onClick={() => handleAddComment(video.id)}
+                    style={{
+                      marginTop: "10px",
+                      padding: "10px 20px",
+                      backgroundColor: "#0288d1",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Post
+                  </button>
+                </div>
+                <div>
+                  {(comments[video.id] || []).map((comment) => (
+                    <div
+                      key={comment._id}
+                      style={{
+                        padding: "10px 0",
+                        borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+                      }}
+                    >
+                      <p style={{ color: "#fff", margin: "0" }}>{comment.text}</p>
+                      <p style={{ color: "#aaa", fontSize: "12px", margin: "5px 0 0" }}>
+                        {moment(comment.createdAt).fromNow()} by {comment.userId}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ))
       ) : (

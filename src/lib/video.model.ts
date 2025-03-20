@@ -28,6 +28,9 @@ const videoSchema = new Schema({
     uploadDate: {
         type: Date,
         default: Date.now,
+    },likes: {
+        type: Number,
+        default: 0,
     },
 });
 
