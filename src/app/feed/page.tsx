@@ -191,6 +191,7 @@ const FeedPage = () => {
         backgroundColor: "#000",
         width: "100%",
         position: "relative",
+        overflowX: "hidden", // Prevent horizontal scrolling
       }}
     >
       {/* Refresh Button (Top Right) */}
@@ -277,7 +278,7 @@ const FeedPage = () => {
             <div
               style={{
                 position: "absolute",
-                top: "42px", // Refresh button center at 42px (20px + 44px/2)
+                top: "42px",
                 left: "20px",
                 background: "rgba(0, 0, 0, 0.7)",
                 padding: "8px 12px",
@@ -287,7 +288,7 @@ const FeedPage = () => {
                 backdropFilter: "blur(4px)",
                 maxWidth: "80%",
                 lineHeight: "1.5",
-                transform: "translateY(-50%)", // Center vertically
+                transform: "translateY(-50%)",
               }}
             >
               Uploaded {moment(video.uploadDate).fromNow()} by {video.userId}
@@ -346,7 +347,7 @@ const FeedPage = () => {
             {showComments === video.id && (
               <div
                 style={{
-                  position: "absolute",
+                  position: "fixed", // Changed to fixed to prevent scrolling issues
                   bottom: "0",
                   left: "0",
                   right: "0",
@@ -355,17 +356,30 @@ const FeedPage = () => {
                   zIndex: 200,
                   maxHeight: "50vh",
                   overflowY: "auto",
+                  overflowX: "hidden", // Prevent horizontal overflow
                   backdropFilter: "blur(4px)",
                   borderTopLeftRadius: "12px",
                   borderTopRightRadius: "12px",
                   transition: "transform 0.2s ease-out",
+                  width: "100%", // Ensure it takes full width
+                  boxSizing: "border-box", // Include padding in width calculation
                 }}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
               >
                 {/* Add Comment Section */}
-                <div style={{ marginTop: "20px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    marginTop: "20px",
+                    marginBottom: "20px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    width: "100%", // Ensure it doesn't exceed container width
+                    boxSizing: "border-box",
+                  }}
+                >
                   <input
                     type="text"
                     value={newComment}
@@ -379,6 +393,8 @@ const FeedPage = () => {
                       background: "rgba(255, 255, 255, 0.1)",
                       color: "#fff",
                       fontSize: "14px",
+                      width: "100%", // Ensure input doesn't overflow
+                      boxSizing: "border-box",
                     }}
                   />
                   <button
@@ -391,6 +407,7 @@ const FeedPage = () => {
                       borderRadius: "8px",
                       cursor: "pointer",
                       fontSize: "14px",
+                      flexShrink: 0, // Prevent button from shrinking
                     }}
                   >
                     Post
@@ -398,7 +415,7 @@ const FeedPage = () => {
                 </div>
 
                 {/* Comments List */}
-                <div style={{ marginTop: "20px" }}>
+                <div style={{ marginTop: "20px", width: "100%", boxSizing: "border-box" }}>
                   {(comments[video.id] || []).map((comment) => (
                     <div
                       key={comment._id}
@@ -408,10 +425,14 @@ const FeedPage = () => {
                         display: "flex",
                         flexDirection: "column",
                         gap: "4px",
+                        width: "100%", // Ensure comments don't overflow
+                        boxSizing: "border-box",
                       }}
                     >
-                      <p style={{ color: "#fff", margin: "0", fontSize: "14px" }}>{comment.text}</p>
-                      <p style={{ color: "#aaa", fontSize: "12px", margin: "0" }}>
+                      <p style={{ color: "#fff", margin: "0", fontSize: "14px", wordBreak: "break-word" }}>
+                        {comment.text}
+                      </p>
+                      <p style={{ color: "#aaa", fontSize: "12px", margin: "0", wordBreak: "break-word" }}>
                         {moment(comment.createdAt).fromNow()} by {comment.userId}
                       </p>
                     </div>
