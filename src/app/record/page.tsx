@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { FaArrowLeft } from "react-icons/fa"; // Import back arrow icon
 
 const Recorder = dynamic(() => import("../../components/Recorder"), {
   ssr: false,
@@ -29,8 +30,30 @@ const RecordPage = () => {
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
+        position: 'relative', // Make container relative for absolute positioning of back button
       }}
     >
+      {/* Back Button */}
+      <button
+        onClick={() => router.back()}
+        aria-label="Go back"
+        style={{
+          position: 'absolute',
+          top: '20px',
+          left: '20px',
+          background: 'rgba(0,0,0,0.7)',
+          borderRadius: '50%',
+          padding: '10px',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100, // Ensure it's above other content
+        }}
+      >
+        <FaArrowLeft size={20} color="#fff" />
+      </button>
       <h1
         style={{
           fontSize: "28px",
