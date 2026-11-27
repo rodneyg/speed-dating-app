@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useMemo, useLayoutEffect } from "react";
+import { useRef, useEffect, useMemo, useLayoutEffect, useState } from "react";
 import { useReactMediaRecorder } from "react-media-recorder";
 
 type RecorderProps = {
@@ -11,6 +11,8 @@ const Recorder = ({ onRecordingComplete }: RecorderProps) => {
   const { status, startRecording, stopRecording, mediaBlobUrl, previewStream, error } =
     useReactMediaRecorder({ video: true, audio: true });
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(45);
 
   const videoElement = useMemo(
     () => (
@@ -31,6 +33,38 @@ const Recorder = ({ onRecordingComplete }: RecorderProps) => {
     ),
     [status]
   );
+
+  useEffect(() => {
+    if (status === "recording") {
+      setSecondsLeft(45);
+      timerRef.current = setInterval(() => {
+        setSecondsLeft((remaining) => {
+          if (remaining <= 1) {
+            if (timerRef.current) {
+              clearInterval(timerRef.current);
+              timerRef.current = null;
+            }
+            stopRecording();
+            return 0;
+          }
+          return remaining - 1;
+        });
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (status === "idle") setSecondsLeft(45);
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [status, stopRecording]);
 
   useEffect(() => {
     if (status === "stopped" && mediaBlobUrl) {
