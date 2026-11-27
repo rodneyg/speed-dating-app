@@ -7,6 +7,7 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   testEnvironment: "jest-environment-jsdom", // Simulates a browser environment
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
+  moduleNameMapper: { "^@/(.*)$": "<rootDir>/src/$1" },
 };
 
 module.exports = createJestConfig(customJestConfig);

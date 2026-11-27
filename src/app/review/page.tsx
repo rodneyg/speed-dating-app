@@ -7,6 +7,7 @@ const ReviewPage = () => {
   const router = useRouter();
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<string>("none"); // Track the selected filter
 
   useEffect(() => {
@@ -44,11 +45,18 @@ const ReviewPage = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ uploadId }),
       });
-      if (!completeRes.ok) console.warn("Upload completion notification failed");
+      const completion = await completeRes.json().catch(() => ({}));
+      if (!completeRes.ok) throw new Error(completion.error || "We could not finish processing your video. Please try again.");
 
+      if (completion.status === "processing") {
+        setUploadMessage(completion.message || "Your video is still processing. Check back shortly.");
+        setUploading(false);
+        return;
+      }
       router.push("/feed");
     } catch (error) {
       console.error("Upload failed:", error);
+      setUploadMessage(error instanceof Error ? error.message : "We could not process your video. Please try again.");
       setUploading(false);
     }
   };
@@ -209,6 +217,11 @@ const ReviewPage = () => {
             Uploading your video... Please wait a moment.
           </p>
         </div>
+      )}
+      {uploadMessage && (
+        <p role="status" style={{ textAlign: "center", color: "#455a64" }}>
+          {uploadMessage}
+        </p>
       )}
     </div>
   );

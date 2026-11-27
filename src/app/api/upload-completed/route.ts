@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { Mux } from "@mux/mux-node";
 import connectToDatabase from "@/lib/mongodb";
 import Video from "@/lib/video.model";
@@ -9,19 +9,37 @@ const mux = new Mux({
 });
 const muxVideo = mux.video;
 
-export async function POST(req: NextRequest) {
+const MAX_ATTEMPTS = 4;
+const RETRY_DELAY_MS = 750;
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export async function POST(req: { json: () => Promise<{ uploadId: string }> }) {
     try {
         await connectToDatabase();
 
         const { uploadId } = await req.json();
         console.log("Processing completed upload:", uploadId);
 
-        // Check if the upload exists and is completed
-        const upload = await muxVideo.uploads.retrieve(uploadId);
-        
-        if (!upload || !upload.asset_id) {
-            console.error("Upload not found or asset not created yet");
-            return NextResponse.json({ error: "Upload not found or still processing" }, { status: 404 });
+        // Mux may finish receiving the direct upload before it has created its asset.
+        // Retry briefly so this common race does not strand the upload.
+        let upload;
+        for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+            upload = await muxVideo.uploads.retrieve(uploadId);
+            if (upload?.asset_id) break;
+            if (attempt < MAX_ATTEMPTS - 1) await delay(RETRY_DELAY_MS);
+        }
+
+        if (!upload?.asset_id) {
+            await Video.findOneAndUpdate(
+                { muxUploadId: uploadId },
+                { status: "processing" },
+                { new: true }
+            );
+            return NextResponse.json(
+                { success: true, status: "processing", message: "Your video is still processing. Check back shortly." },
+                { status: 202 }
+            );
         }
 
         // Get the asset details
@@ -29,7 +47,15 @@ export async function POST(req: NextRequest) {
         
         if (!asset || !asset.playback_ids || asset.playback_ids.length === 0) {
             console.error("Asset not found or playback IDs not available");
-            return NextResponse.json({ error: "Asset not found or playback IDs not available" }, { status: 404 });
+            await Video.findOneAndUpdate(
+                { muxUploadId: uploadId },
+                { status: "processing", muxAssetId: upload.asset_id },
+                { new: true }
+            );
+            return NextResponse.json(
+                { success: true, status: "processing", message: "Your video is still processing. Check back shortly." },
+                { status: 202 }
+            );
         }
 
         const playbackId = asset.playback_ids[0].id;
