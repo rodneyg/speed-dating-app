@@ -72,7 +72,7 @@ const FeedPage = () => {
         setVideos(cachedVideos);
         setError("You are offline. Showing cached videos.");
       } else {
-        setError("Failed to load videos. Please check your connection and try again.");
+        setError("The video service is temporarily unavailable. Please try again later.");
       }
     } finally {
       setLoading(false);

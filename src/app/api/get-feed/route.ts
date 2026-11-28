@@ -32,6 +32,6 @@ export async function GET() {
     return NextResponse.json(videos);
   } catch (error) {
     console.error("Error in /api/get-feed:", error);
-    return NextResponse.json({ error: "Failed to fetch videos from MongoDB" }, { status: 500 });
+    return NextResponse.json({ error: "Video service is temporarily unavailable. Please try again later." }, { status: 503 });
   }
 }
