@@ -13,6 +13,18 @@ const Recorder = ({ onRecordingComplete }: RecorderProps) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(45);
+  const [serviceUnavailable, setServiceUnavailable] = useState(false);
+
+  const handleStartRecording = async () => {
+    setServiceUnavailable(false);
+    try {
+      const response = await fetch("/api/get-upload-url", { method: "POST" });
+      if (!response.ok) throw new Error("Upload service unavailable");
+      startRecording();
+    } catch {
+      setServiceUnavailable(true);
+    }
+  };
 
   const videoElement = useMemo(
     () => (
@@ -162,7 +174,7 @@ const Recorder = ({ onRecordingComplete }: RecorderProps) => {
       </p>
       {status !== "recording" ? (
         <button
-          onClick={startRecording}
+          onClick={handleStartRecording}
           style={{
             padding: "12px 24px",
             fontSize: "16px",
@@ -210,6 +222,11 @@ const Recorder = ({ onRecordingComplete }: RecorderProps) => {
         >
           Stop Recording
         </button>
+      )}
+      {serviceUnavailable && (
+        <p role="alert" style={{ color: "#d32f2f", textAlign: "center" }}>
+          The video service is temporarily unavailable. Please try again later.
+        </p>
       )}
     </div>
   );
